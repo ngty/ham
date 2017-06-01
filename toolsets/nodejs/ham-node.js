@@ -2,9 +2,10 @@ var cwd = process.cwd();
 var PATH = require('path');
 var FS = require('fs');
 
+var appConfig = {};
 var pathAppConfig = PATH.join(cwd,'/sources/app_config.js');
 if (FS.existsSync(pathAppConfig)) {
-  require(pathAppConfig); // load config
+  appConfig = require(pathAppConfig); // load config
 }
 
 var NI, niFS;
@@ -220,6 +221,8 @@ function frontendWatch(aParams) {
   lazyLoadWebPack();
   var useSourceMap = NI.selectn("useSourceMap",aParams);
   var serverType = NI.selectn("serverType", aParams);
+  var bundlePort = NI.isEmpty(serverType) ?
+    global.bundlePort : (appConfig.serverPorts[serverType]+1);
 
   var myConfig = configFrontEnd(true, useSourceMap, serverType);
 
@@ -227,7 +230,7 @@ function frontendWatch(aParams) {
   myConfig.devtool = useSourceMap ? 'source-map' : 'eval';
 
   // For hot module reloading
-  myConfig.entry.common.push('webpack-dev-server/client?http://localhost:'+global.bundlePort);
+  myConfig.entry.common.push('webpack-dev-server/client?http://localhost:'+bundlePort);
 
   if (hotReload) {
     // NOTE: Hot reloading fully seems to work well enought, if you change a
@@ -246,7 +249,7 @@ function frontendWatch(aParams) {
   myConfig.plugins.push(new WEBPACK.NoErrorsPlugin());
 
   // Setup the public output path
-  myConfig.output.publicPath = 'http://localhost:'+global.bundlePort+'/build/';
+  myConfig.output.publicPath = 'http://localhost:'+bundlePort+'/build/';
 
   webpackServer = new WebpackDevServer(WEBPACK(myConfig), {
     publicPath: '/build/',
@@ -261,12 +264,12 @@ function frontendWatch(aParams) {
     headers: { 'Access-Control-Allow-Origin': '*' }
   });
 
-  webpackServer.listen(global.bundlePort, 'localhost', function (err /*, result*/) {
+  webpackServer.listen(bundlePort, 'localhost', function (err /*, result*/) {
     if(err) {
       console.log(err);
     }
     else {
-      console.log('Webpack dev server listening at localhost:'+global.bundlePort);
+      console.log('Webpack dev server listening at localhost:'+bundlePort);
     }
   });
 }
