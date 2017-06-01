@@ -44,9 +44,10 @@ function lazyLoadWebPack() {
 //======================================================================
 // Front-end
 //======================================================================
-var configFrontEnd = function(aIsDev,aUseSourceMap) {
+var configFrontEnd = function(aIsDev, aUseSourceMap, aSeverType) {
   var entry = {};
-  var clientFilesDir = PATH.resolve(baseDir, 'sources/client/');
+  var clientDir = NI.isEmpty(aSeverType) ? 'sources/client/' : NI.format('sources/client_%s', aSeverType);
+  var clientFilesDir = PATH.resolve(baseDir, clientDir);
   var clientFiles = niFS.walkSync(clientFilesDir);
   // NI.info("clientFiles: %d", clientFiles.length);
   if (clientFiles.length <= 0) {
@@ -163,7 +164,8 @@ function buildOnBuild(done) {
 
 function frontendBuild(aParams,aDone) {
   lazyLoadWebPack();
-  var myConfig = configFrontEnd(false,true);
+  var serverType = NI.selectn('serverType', aParams);
+  var myConfig = configFrontEnd(false, true, serverType);
 
   function rmDir(dirPath,aRemoveThisDir) {
     var files = FS.readdirSync(dirPath);
@@ -217,8 +219,9 @@ var webpackServer = undefined;
 function frontendWatch(aParams) {
   lazyLoadWebPack();
   var useSourceMap = NI.selectn("useSourceMap",aParams);
+  var serverType = NI.selectn("serverType", aParams);
 
-  var myConfig = configFrontEnd(true,useSourceMap);
+  var myConfig = configFrontEnd(true, useSourceMap, serverType);
 
   // Use 'eval', its *much* faster than source-map
   myConfig.devtool = useSourceMap ? 'source-map' : 'eval';
@@ -273,6 +276,8 @@ exports.frontendWatch = frontendWatch;
 function backendWatch(aParams) {
   var nodeEnv = NI.selectn("nodeEnv",aParams) || 'development';
   var NODEMON = require('nodemon');
+  var serverType = NI.selectn("serverType", aParams);
+
   NODEMON({
     verbose: true,
     script: 'sources/server.js',
@@ -281,6 +286,7 @@ function backendWatch(aParams) {
     ignore: ["*flymake*.*", "*-test.js", "*-test.ts", "sources/client.js", "sources/client/*", "sources/components/*", "node_modules/*"],
     env: {
       'NODE_ENV': nodeEnv,
+      'SERVER_TYPE': serverType,
       // this is to make sure that NODE_PATH is 'empty', the same as on the
       // production server
       'NODE_PATH': '~/a_non_existing_path/'
@@ -296,10 +302,23 @@ function backendWatch(aParams) {
 }
 exports.backendWatch = backendWatch;
 
-exports.build = function(aParams) {
+function build(aParams) {
   lint(aParams, function() {
-    frontendBuild();
+    frontendBuild(aParams);
   });
+}
+exports.build = build;
+
+exports.masterBuild = function(aParams) {
+  build({serverType: 'master'});
+}
+
+exports.webBuild = function(aParams) {
+  build({serverType: 'web'});
+}
+
+exports.workerBuild = function(aParams) {
+  build({serverType: 'work'});
 }
 
 exports.dev = function() {
@@ -324,6 +343,30 @@ exports.testBackend = function() {
 
 exports.prodServer = function() {
   backendWatch({ nodeEnv: 'production' });
+}
+
+exports.masterFrontendWatch = function() {
+  frontendWatch({serverType: 'master'});
+}
+
+exports.workerFrontendWatch = function() {
+  frontendWatch({serverType: 'worker'});
+}
+
+exports.webFrontendWatch = function() {
+  frontendWatch({serverType: 'web'});
+}
+
+exports.masterBackendWatch = function() {
+  backendWatch({serverType: 'master'});
+}
+
+exports.workerBackendWatch = function() {
+  backendWatch({serverType: 'worker'});
+}
+
+exports.webBackendWatch = function() {
+  backendWatch({serverType: 'web'});
 }
 
 var shellProcess;
