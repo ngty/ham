@@ -47,8 +47,7 @@ function lazyLoadWebPack() {
 //======================================================================
 var configFrontEnd = function(aIsDev, aUseSourceMap, aSeverType) {
   var entry = {};
-  var clientDir = NI.isEmpty(aSeverType) ? 'sources/client/' : NI.format('sources/client_%s', aSeverType);
-  var clientFilesDir = PATH.resolve(baseDir, clientDir);
+  var clientFilesDir = PATH.resolve(baseDir, 'sources/client/');
   var clientFiles = niFS.walkSync(clientFilesDir);
   // NI.info("clientFiles: %d", clientFiles.length);
   if (clientFiles.length <= 0) {
